@@ -1,0 +1,59 @@
+# --AC Creator-- 12/27/2020 7:37:26 PM
+$$VERSION:0.07
+$AMOUNT:-1
+$DELAY:30
+$CHARGES:200.0
+$UNITCHARGES:50.0
+
+if(GetTimer0 eq0)
+	@find_units
+	SetTimer0(<-DELAY)
+endif
+
+SetUnitUIText(Self 1 concat("Delay : " <-delay -(<-Delay -(GetTimer0))))
+
+:debug_popup
+->text ->indice 
+
+<-text ->debug_text{<-indice}
+SetUnitPopupText0(self <-debug_text)
+
+:once
+	if(GetEditMode())
+		SetUnitSelectable(Self true)
+		debug(1)
+		SetUnitDebugText(Self "")
+		SetUnitPopupEnabled(self true)
+		CreateTable ->debug_text
+	else
+		SetUnitSelectable(Self true)
+		SetUnitPopupEnabled(self false)
+		debug(0)
+	endif
+	@debug_popup("VERSION" <-VERSION)
+	SetUnitUIText(Self 0 concat("Charges : " <-CHARGES))
+	SetUnitUIText(Self 1 concat("Delay : " <-DELAY))
+	SetTimer0(<-DELAY)
+
+:find_units
+GetUnitsInRange( GetUnitPosition(self) 9999 true true false 2 1 1) ->units
+@debug_popup("list" <-units)
+GetListCount(<-units) ->UnitsNombre
+@debug_popup("List count" <-UnitsNombre)
+if(<-UnitsNombre gt0)
+	do(<-UnitsNombre 0)
+		GetListElement(<-units I) ->unit
+		@debug_popup(I <-Unit)
+		SetCreeper(GetUnitCell(<-unit) <-AMOUNT False)
+	loop
+	<-UnitsNombre div(<-UNITCHARGES) ->charge_ratio
+	@debug_popup("CHARGE Ratio2" <-charge_ratio)
+	<-CHARGES -(<-charge_ratio) ->CHARGES
+	@debug_popup("CHARGES UPDATED" <-CHARGES)
+	SetUnitUIText(Self 0 concat("Charges : " <-charges))
+	if(<-CHARGES lte(0))
+		ShowGameMessage("Alas" "" "" true)
+		DestroyUnit(self false false true)
+	endif
+endif
+
