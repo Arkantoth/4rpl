@@ -1,7 +1,13 @@
 # --AC Creator-- 12/27/2020 7:37:26 PM
-$$VERSION:0.07
+$$VERSION:0.08
+$$NAME:"Temple of AC"
+$$DESCRIPTION:"Generate AC on friendly units location"
+$$Unit_infos_charge:"Charges : %1"
+$$Unit_infos_delay:" %1 AC in %2 s"
+$$Delay_secondes:"%1.%2"
+
 $AMOUNT:-1
-$DELAY:30
+$DELAY:30.0
 $CHARGES:200.0
 $UNITCHARGES:50.0
 
@@ -10,50 +16,56 @@ if(GetTimer0 eq0)
 	SetTimer0(<-DELAY)
 endif
 
-SetUnitUIText(Self 1 concat("Delay : " <-delay -(<-Delay -(GetTimer0))))
-
-:debug_popup
-->text ->indice 
-
-<-text ->debug_text{<-indice}
-SetUnitPopupText0(self <-debug_text)
+if(GetUnitUpdateCount() %(3) eq0)
+	#Update Info display every tenth of a second
+	#30 frames per second 1/10 of second = 3 frames
+	SetUnitPopupText1(Self @Unit_infos)
+endif
 
 :once
-	if(GetEditMode())
-		SetUnitSelectable(Self true)
-		debug(1)
-		SetUnitDebugText(Self "")
-		SetUnitPopupEnabled(self true)
-		CreateTable ->debug_text
-	else
-		SetUnitSelectable(Self true)
-		SetUnitPopupEnabled(self false)
-		debug(0)
-	endif
-	@debug_popup("VERSION" <-VERSION)
-	SetUnitUIText(Self 0 concat("Charges : " <-CHARGES))
-	SetUnitUIText(Self 1 concat("Delay : " <-DELAY))
+	SetUnitSelectable(Self False)
+	SetUnitDebugText(Self "")
 	SetTimer0(<-DELAY)
+	
+:Unit_infos
+<-DESCRIPTION ->text
+StringReplace(<-Unit_infos_charge "%1" <-CHARGES) ->Charge_texte
+<-Unit_infos_delay ->Delay_texte
+StringReplace(<-Delay_texte "%1" 0 -(<-Amount)) ->Delay_texte
+if(GetUnitUpdateCount() eq0)
+	<-Delay ->remaining_time
+else
+	GetTimer0 ->remaining_time
+endif
+
+<-remaining_time /(30) ->remaining_time_secondes
+<-remaining_time mod(30) ->remaining_time_frames
+floor(<-remaining_time_frames /(300.0) mul(100)) ->remaining_time_millisecondes
+StringReplace(<-Delay_secondes "%1" <-remaining_time_secondes ) ->remaining_time_texte
+StringReplace(<-remaining_time_texte "%2" <-remaining_time_millisecondes ) ->remaining_time_texte
+StringReplace(<-Delay_texte "%2" <-remaining_time_texte) ->Delay_texte
+concat3(<-DESCRIPTION LF concat3(<-Charge_texte LF <-Delay_texte)) ->texte
+<-texte
 
 :find_units
 GetUnitsInRange( GetUnitPosition(self) 9999 true true false 2 1 1) ->units
-@debug_popup("list" <-units)
 GetListCount(<-units) ->UnitsNombre
-@debug_popup("List count" <-UnitsNombre)
+
 if(<-UnitsNombre gt0)
 	do(<-UnitsNombre 0)
 		GetListElement(<-units I) ->unit
-		@debug_popup(I <-Unit)
 		SetCreeper(GetUnitCell(<-unit) <-AMOUNT False)
 	loop
 	<-UnitsNombre div(<-UNITCHARGES) ->charge_ratio
-	@debug_popup("CHARGE Ratio2" <-charge_ratio)
 	<-CHARGES -(<-charge_ratio) ->CHARGES
-	@debug_popup("CHARGES UPDATED" <-CHARGES)
-	SetUnitUIText(Self 0 concat("Charges : " <-charges))
 	if(<-CHARGES lte(0))
-		ShowGameMessage("Alas" "" "" true)
+		ShowADAMessage("Alas" "TRANSMISSION")
 		DestroyUnit(self false false true)
 	endif
 endif
 
+:Awake
+	SetUnitDebugText(Self "")
+	SetUnitPopupEnabled(Self True)
+	SetUnitPopupText0(Self "Temple of AC")
+	SetUnitPopupText1(Self @Unit_infos)
